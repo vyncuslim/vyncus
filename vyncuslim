@@ -1,0 +1,186 @@
+<!-- index.html - 用户认证系统 (注册、登录、密码重置) -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>用户认证系统</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    input { margin: 5px; padding: 10px; width: 250px; }
+    button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h2>用户认证系统</h2>
+  
+  <div>
+    <h3>注册</h3>
+    <input id="regUsername" placeholder="用户名">
+    <input id="regEmail" placeholder="邮箱">
+    <input id="regPassword" placeholder="密码" type="password">
+    <input id="regSecurityQuestion" placeholder="密保问题">
+    <input id="regSecurityAnswer" placeholder="密保答案">
+    <button onclick="register()">注册</button>
+  </div>
+
+  <div>
+    <h3>登录</h3>
+    <input id="loginUsername" placeholder="用户名">
+    <input id="loginPassword" placeholder="密码" type="password">
+    <button onclick="login()">登录</button>
+  </div>
+
+  <div>
+    <h3>密码重置</h3>
+    <input id="resetEmail" placeholder="邮箱">
+    <input id="resetCode" placeholder="验证码">
+    <input id="newPassword" placeholder="新密码" type="password">
+    <button onclick="sendResetCode()">发送验证码</button>
+    <button onclick="resetPassword()">重置密码</button>
+  </div>
+
+  <script src="api.js"></script>
+  <script>
+    async function register() {
+      const result = await registerUser(regUsername.value, regEmail.value, regPassword.value, regSecurityQuestion.value, regSecurityAnswer.value);
+      alert(result.message || JSON.stringify(result));
+    }
+
+    async function login() {
+      const result = await loginUser(loginUsername.value, loginPassword.value);
+      alert(result.message || JSON.stringify(result));
+    }
+
+    async function sendResetCode() {
+      const result = await sendResetCode(resetEmail.value);
+      alert(result.message || JSON.stringify(result));
+    }
+
+    async function resetPassword() {
+      const result = await resetPassword(resetEmail.value, resetCode.value, newPassword.value);
+      alert(result.message || JSON.stringify(result));
+    }
+  </script>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Authentication</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; margin: 50px; }
+        form { display: inline-block; text-align: left; }
+        input { display: block; margin: 10px 0; padding: 8px; width: 200px; }
+        button { padding: 8px 20px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h2>Register</h2>
+    <form id="registerForm">
+        <label for="regUsername">Username:</label>
+        <input type="text" id="regUsername" required>
+        
+        <label for="regPassword">Password:</label>
+        <input type="password" id="regPassword" required>
+        
+        <button type="submit">Register</button>
+    </form>
+
+    <h2>Login</h2>
+    <form id="loginForm">
+        <label for="username">Username:</label>
+        <input type="text" id="username" required>
+        
+        <label for="password">Password:</label>
+        <input type="password" id="password" required>
+        
+        <button type="submit">Login</button>
+    </form>
+
+    <h2>Reset Password</h2>
+    <form id="resetPasswordForm">
+        <label for="resetEmail">Email:</label>
+        <input type="email" id="resetEmail" required>
+        
+        <button type="submit">Send Verification Code</button>
+    </form>
+
+    <form id="securityQuestionForm" style="display:none;">
+        <label for="securityAnswer">Security Question Answer:</label>
+        <input type="text" id="securityAnswer" required>
+        
+        <button type="submit">Verify</button>
+    </form>
+
+    <form id="changePasswordForm" style="display:none;">
+        <label for="oldPassword">Old Password:</label>
+        <input type="password" id="oldPassword" required>
+        
+        <label for="newPassword">New Password:</label>
+        <input type="password" id="newPassword" required>
+        
+        <button type="submit">Change Password</button>
+    </form>
+
+    <script>
+        document.getElementById('registerForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+            const username = document.getElementById('regUsername').value;
+            const password = document.getElementById('regPassword').value;
+            
+            const response = await fetch('/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+            
+            const data = await response.json();
+            if (response.ok) {
+                alert('Registration successful!');
+            } else {
+                alert('Error: ' + data.error);
+            }
+        });
+
+        document.getElementById('loginForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            const response = await fetch('/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+            
+            const data = await response.json();
+            if (response.ok) {
+                alert('Login successful!');
+                localStorage.setItem('token', data.token);
+            } else {
+                alert('Error: ' + data.error);
+            }
+        });
+
+        document.getElementById('resetPasswordForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+            const email = document.getElementById('resetEmail').value;
+            
+            const response = await fetch('/send-reset-code', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email })
+            });
+            
+            const data = await response.json();
+            if (response.ok) {
+                alert('Verification code sent to your email!');
+            } else {
+                alert('Error: ' + data.error);
+            }
+        });
+    </script>
+</body>
+</html>
+
