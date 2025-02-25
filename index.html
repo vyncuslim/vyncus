@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Authentication</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; margin: 50px; }
+        form { display: inline-block; text-align: left; }
+        input { display: block; margin: 10px 0; padding: 8px; width: 200px; }
+        button { padding: 8px 20px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h2>Register</h2>
+    <form id="registerForm">
+        <label for="regUsername">Username:</label>
+        <input type="text" id="regUsername" required>
+        
+        <label for="regPassword">Password:</label>
+        <input type="password" id="regPassword" required>
+        
+        <button type="submit">Register</button>
+    </form>
+
+    <h2>Login</h2>
+    <form id="loginForm">
+        <label for="username">Username:</label>
+        <input type="text" id="username" required>
+        
+        <label for="password">Password:</label>
+        <input type="password" id="password" required>
+        
+        <button type="submit">Login</button>
+    </form>
+
+    <h2>Reset Password</h2>
+    <form id="resetPasswordForm">
+        <label for="resetEmail">Email:</label>
+        <input type="email" id="resetEmail" required>
+        
+        <button type="submit">Send Verification Code</button>
+    </form>
+
+    <form id="securityQuestionForm" style="display:none;">
+        <label for="securityAnswer">Security Question Answer:</label>
+        <input type="text" id="securityAnswer" required>
+        
+        <button type="submit">Verify</button>
+    </form>
+
+    <form id="changePasswordForm" style="display:none;">
+        <label for="oldPassword">Old Password:</label>
+        <input type="password" id="oldPassword" required>
+        
+        <label for="newPassword">New Password:</label>
+        <input type="password" id="newPassword" required>
+        
+        <button type="submit">Change Password</button>
+    </form>
+
+    <script>
+        document.getElementById('registerForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+            const username = document.getElementById('regUsername').value;
+            const password = document.getElementById('regPassword').value;
+            
+            const response = await fetch('/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+            
+            const data = await response.json();
+            if (response.ok) {
+                alert('Registration successful!');
+            } else {
+                alert('Error: ' + data.error);
+            }
+        });
+
+        document.getElementById('loginForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            const response = await fetch('/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+            
+            const data = await response.json();
+            if (response.ok) {
+                alert('Login successful!');
+                localStorage.setItem('token', data.token);
+            } else {
+                alert('Error: ' + data.error);
+            }
+        });
+
+        document.getElementById('resetPasswordForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+            const email = document.getElementById('resetEmail').value;
+            
+            const response = await fetch('/send-reset-code', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email })
+            });
+            
+            const data = await response.json();
+            if (response.ok) {
+                alert('Verification code sent to your email!');
+            } else {
+                alert('Error: ' + data.error);
+            }
+        });
+    </script>
+    const express = require('express');
+const mongoose = require('mongoose');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+const cors = require('cors');
+const path = require('path');
+require('dotenv').config();
+
+const app = express();
+const PORT = process.env.PORT || 5000;
+const SECRET_KEY = process.env.SECRET_KEY || 'supersecretkey';
+
+app.use(express.json());
+app.use(cors());
+app.use(express.static(path.join(__dirname, 'public')));
+
+mongoose.connect(process.env.MONGO_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+}).then(() => console.log('MongoDB Connected'))
+  .catch(err => console.log(err));
+
+const UserSchema = new mongoose.Schema({
+    username: String,
+    password: String,
+});
+
+const User = mongoose.model('User', UserSchema);
+
+app.post('/register', async (req, res) => {
+    const { username, password } = req.body;
+    const hashedPassword = await bcrypt.hash(password, 10);
+    try {
+        const newUser = new User({ username, password: hashedPassword });
+        await newUser.save();
+        res.status(201).json({ message: 'User registered successfully' });
+    } catch (error) {
+        res.status(500).json({ error: 'Error registering user' });
+    }
+});
+
+app.post('/login', async (req, res) => {
+    const { username, password } = req.body;
+    const user = await User.findOne({ username });
+    if (!user) return res.status(400).json({ error: 'User not found' });
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) return res.status(400).json({ error: 'Invalid credentials' });
+
+    const token = jwt.sign({ id: user._id }, SECRET_KEY, { expiresIn: '1h' });
+    res.json({ token });
+});
+
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+</body>
+</html>
+
+
+
